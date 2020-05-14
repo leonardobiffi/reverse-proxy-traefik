@@ -1,0 +1,28 @@
+version: '3'
+
+services:
+    reverse-proxy:
+        image: traefik:v1.7.16 # The official Traefik docker image
+        command: --docker --api # Enables the web UI and tells Træfik to listen to docker
+        ports:
+            - '443:443'
+            - '80:80'
+            - '8080:8080'
+        volumes:
+            - /var/run/docker.sock:/var/run/docker.sock # So that Traefik can listen to the Docker events
+            - ./certs/fullchain.pem:/sslcerts/server.crt # Letsencrypt certs generate by dns-challenge manual
+            - ./certs/privkey.pem:/sslcerts/server.key # Letsencrypt certs generate by dns-challenge manual
+            - ./traefik.toml:/traefik.toml
+        depends_on:
+            - static-files
+    
+    static-files:
+        image: leonardobiffi/alpine-nginx-php7.3:latest
+        volumes:
+            - ./static:/var/www/html
+        labels:
+            - 'traefik.enable=true'
+            - 'traefik.frontend.rule=Host:nikkey.magento.gq'
+            - 'traefik.port=8080'
+        ports:
+            - 8080
